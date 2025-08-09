@@ -1,168 +1,77 @@
-import { GameSession, Player, Property } from '@/types/game';
-import { generateSessionId } from './utils';
-import { getMockProperties, fetchRealEstateData } from './mockData';
+import { GameSession } from '@/types/game';
 
-const STORAGE_KEY = 'homebet_sessions';
-const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+const LOCAL_PLAYER_KEY_PREFIX = 'homebet_player_';
 
-export function createSessionSync(playerHandle: string): GameSession {
-  const sessionId = generateSessionId();
-  const now = Date.now();
-  
-  const session: GameSession = {
-    id: sessionId,
-    players: [
-      {
-        id: 'player1',
-        handle: playerHandle,
-        score: 0,
-        guesses: [],
-        isReady: true,
-        joinedAt: now,
-      },
-    ],
-    properties: getMockProperties(5),
-    currentPropertyIndex: 0,
-    status: 'waiting',
-    createdAt: now,
-    expiresAt: now + SESSION_DURATION,
-  };
-  
-  saveSession(session);
-  return session;
+function getApiBase() {
+  return '/api/session';
 }
 
-export async function createSession(playerHandle: string): Promise<GameSession> {
-  // First create a session with mock properties for immediate UI responsiveness
-  const session = createSessionSync(playerHandle);
-  // Then try to swap in real data in the background
-  try {
-    const realProps = await fetchRealEstateData({ city: 'Provo', state: 'UT', limit: 5 });
-    if (realProps && realProps.length) {
-      const updated: GameSession = { ...session, properties: realProps };
-      saveSession(updated);
-      return updated;
-    }
-  } catch {
-    // ignore, stay with mocks
-  }
-  return session;
-}
-
-export function joinSession(sessionId: string, playerHandle: string): GameSession | null {
-  const session = getSession(sessionId);
-  
-  if (!session || session.status !== 'waiting' || session.players.length >= 2) {
-    return null;
-  }
-  
-  const now = Date.now();
-  session.players.push({
-    id: 'player2',
-    handle: playerHandle,
-    score: 0,
-    guesses: [],
-    isReady: true,
-    joinedAt: now,
-  });
-  
-  session.status = 'active';
-  saveSession(session);
-  return session;
-}
-
-export function getSession(sessionId: string): GameSession | null {
+export function getLocalPlayerId(sessionId: string): string | null {
   if (typeof window === 'undefined') return null;
-  
-  const sessions = getAllSessions();
-  const session = sessions[sessionId];
-  
-  if (!session) return null;
-  
-  // Check if session expired
-  if (Date.now() > session.expiresAt) {
-    deleteSession(sessionId);
+  try {
+    return localStorage.getItem(LOCAL_PLAYER_KEY_PREFIX + sessionId);
+  } catch {
     return null;
   }
-  
+}
+
+export function markLocalPlayer(sessionId: string, playerId: 'player1' | 'player2') {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(LOCAL_PLAYER_KEY_PREFIX + sessionId, playerId);
+  } catch {
+    /* noop */
+  }
+}
+
+export async function createSession(handle: string): Promise<GameSession> {
+  const res = await fetch(getApiBase(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ handle }),
+  });
+  if (!res.ok) throw new Error('Failed to create session');
+  const { sessionId } = await res.json();
+  // Mark this browser as player1
+  markLocalPlayer(sessionId, 'player1');
+  const session = await getSession(sessionId);
+  if (!session) throw new Error('Session not found after creation');
   return session;
 }
 
-export function saveSession(session: GameSession): void {
-  if (typeof window === 'undefined') return;
-  
-  const sessions = getAllSessions();
-  sessions[session.id] = session;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+export async function joinSession(sessionId: string, handle: string): Promise<GameSession | null> {
+  const res = await fetch(getApiBase() + '/join', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: sessionId, handle }),
+  });
+  if (!res.ok) return null;
+  // Mark this browser as player2
+  markLocalPlayer(sessionId, 'player2');
+  return await getSession(sessionId);
 }
 
-export function deleteSession(sessionId: string): void {
-  if (typeof window === 'undefined') return;
-  
-  const sessions = getAllSessions();
-  delete sessions[sessionId];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+export async function getSession(sessionId: string): Promise<GameSession | null> {
+  const res = await fetch(getApiBase() + `?id=${encodeURIComponent(sessionId)}`, {
+    cache: 'no-store',
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return (data?.session as GameSession) || null;
 }
 
-function getAllSessions(): Record<string, GameSession> {
-  if (typeof window === 'undefined') return {};
-  
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) return {};
-  
-  try {
-    return JSON.parse(stored);
-  } catch {
-    return {};
-  }
-}
-
-export function updatePlayerGuess(
+export async function updatePlayerGuess(
   sessionId: string,
   playerId: string,
   propertyId: string,
   guessAmount: number,
   points: number,
   accuracy: number
-): void {
-  const session = getSession(sessionId);
-  if (!session) return;
-  
-  const player = session.players.find(p => p.id === playerId);
-  if (!player) return;
-  
-  player.guesses.push({
-    propertyId,
-    amount: guessAmount,
-    points,
-    accuracy,
-    timestamp: Date.now(),
+): Promise<boolean> {
+  const res = await fetch(getApiBase() + '/guess', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: sessionId, playerId, propertyId, amount: guessAmount, points, accuracy }),
   });
-  
-  player.score += points;
-  
-  // Check if both players have guessed
-  const allGuessed = session.players.every(p => 
-    p.guesses.some(g => g.propertyId === propertyId)
-  );
-  
-  if (allGuessed) {
-    if (session.currentPropertyIndex < session.properties.length - 1) {
-      session.currentPropertyIndex++;
-    } else {
-      session.status = 'completed';
-      // Determine winner
-      const [p1, p2] = session.players;
-      if (p1.score > p2.score) {
-        session.winner = p1.id;
-      } else if (p2.score > p1.score) {
-        session.winner = p2.id;
-      } else {
-        // Tie-breaker logic here if needed
-        session.winner = 'tie';
-      }
-    }
-  }
-  
-  saveSession(session);
+  return res.ok;
 }

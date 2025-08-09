@@ -7,7 +7,7 @@ import PriceInput from './PriceInput';
 import ScoreBoard from './ScoreBoard';
 import ResultsModal from './ResultsModal';
 import { calculateScore } from '@/lib/gameLogic';
-import { updatePlayerGuess, getSession } from '@/lib/sessionManager';
+import { updatePlayerGuess, getSession, getLocalPlayerId } from '@/lib/sessionManager';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface GameBoardProps {
@@ -20,19 +20,21 @@ export default function GameBoard({ session: initialSession }: GameBoardProps) {
   const [showResults, setShowResults] = useState(false);
   const [lastResults, setLastResults] = useState<any>(null);
   
-  // Determine which player this is (simplified for MVP)
-  const isPlayer1 = true; // In production, track this properly
+  // Determine which player this device is
+  const localRole = getLocalPlayerId(session.id);
+  const isPlayer1 = localRole === 'player1';
   const currentPlayer = isPlayer1 ? session.players[0] : session.players[1];
   const currentProperty = session.properties[session.currentPropertyIndex];
   
   useEffect(() => {
     // Poll for updates
-    const interval = setInterval(() => {
-      const updatedSession = getSession(session.id);
+    const poll = async () => {
+      const updatedSession = await getSession(session.id);
       if (updatedSession) {
         setSession(updatedSession);
       }
-    }, 2000);
+    };
+    const interval = setInterval(poll, 2000);
     
     return () => clearInterval(interval);
   }, [session.id]);

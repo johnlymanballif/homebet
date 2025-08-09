@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getSession, joinSession } from '@/lib/sessionManager';
+import { getSession, joinSession, getLocalPlayerId, markLocalPlayer } from '@/lib/sessionManager';
 import GameBoard from '@/components/GameBoard';
 import { GameSession } from '@/types/game';
 import { motion } from 'framer-motion';
@@ -21,26 +21,32 @@ export default function GamePage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const loadSession = () => {
-      const gameSession = getSession(sessionId);
-      
+    let cancelled = false;
+    const loadSession = async () => {
+      const gameSession = await getSession(sessionId);
+
       if (!gameSession) {
-        setError('Session not found or expired');
+        if (!cancelled) setError('Session not found or expired');
         return;
       }
 
-      setSession(gameSession);
-      
-      // Check if this is a new player who needs to join
-      if (gameSession.players.length === 1 && gameSession.status === 'waiting') {
-        setNeedsToJoin(true);
+      if (!cancelled) setSession(gameSession);
+
+      // Determine if this browser is already associated to player1/2
+      const local = getLocalPlayerId(sessionId);
+      const isInitiatorPresent = local === 'player1';
+      // If initiator opened the link on their device, do not ask to join
+      if (!isInitiatorPresent && gameSession.players.length === 1 && gameSession.status === 'waiting') {
+        if (!cancelled) setNeedsToJoin(true);
       }
     };
 
     loadSession();
     
     // Poll for updates
-    const interval = setInterval(loadSession, 2000);
+    const interval = setInterval(() => {
+      loadSession();
+    }, 2000);
     return () => clearInterval(interval);
   }, [sessionId]);
 
@@ -51,7 +57,7 @@ export default function GamePage() {
     }
 
     setIsJoining(true);
-    const updatedSession = joinSession(sessionId, playerHandle);
+    const updatedSession = await joinSession(sessionId, playerHandle);
     
     if (updatedSession) {
       setSession(updatedSession);
