@@ -4,6 +4,18 @@ import type { GameSession } from '@/types/game';
 import { setSession, getSessionById } from './store';
 import { getMockProperties, fetchRealEstateData } from '@/lib/mockData';
 
+function getBaseUrlFromRequest(req: Request): string {
+  try {
+    const url = new URL(req.url);
+    // Prefer forwarded headers if available
+    const proto = (req.headers.get('x-forwarded-proto') || url.protocol.replace(':', '')).trim();
+    const host = (req.headers.get('x-forwarded-host') || req.headers.get('host') || url.host).trim();
+    return `${proto}://${host}`;
+  } catch {
+    return '';
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -36,7 +48,8 @@ export async function POST(request: Request) {
     setSession(session);
 
     // Background swap-in of real properties
-    fetchRealEstateData({ city, state, limit })
+    const baseUrl = getBaseUrlFromRequest(request);
+    fetchRealEstateData({ city, state, limit, baseUrl })
       .then((real) => {
         if (real && real.length) {
           setSession({ ...session, properties: real });
