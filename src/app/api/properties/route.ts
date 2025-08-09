@@ -36,7 +36,19 @@ function normalizeToProperty(raw: any): Property | null {
     if (raw.primary_image_url) photoCandidates.push(raw.primary_image_url);
     const photos: string[] = photoCandidates.filter(Boolean).slice(0, 5);
 
-  const description = raw.description || raw.publicRemarks || raw?.prop_summary || 'No description available';
+    let description: string = 'No description available';
+    if (typeof raw.description === 'string') description = raw.description;
+    else if (typeof raw.publicRemarks === 'string') description = raw.publicRemarks;
+    else if (typeof raw.prop_summary === 'string') description = raw.prop_summary;
+    else if (raw.description && typeof raw.description === 'object') {
+      const d = raw.description;
+      const parts: string[] = [];
+      if (d.beds) parts.push(`${d.beds} beds`);
+      if (d.baths_consolidated || d.baths) parts.push(`${d.baths_consolidated || d.baths} baths`);
+      if (d.sqft) parts.push(`${d.sqft} sqft`);
+      if (d.lot_sqft) parts.push(`${d.lot_sqft} lot sqft`);
+      description = parts.length ? parts.join(' • ') : description;
+    }
     const features: string[] = [];
 
     if (!id || !price) return null;

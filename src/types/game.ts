@@ -6,8 +6,15 @@ export interface Property {
   zipCode: string;
   price: number;
   bedrooms: number;
+  beds_max?: number;
+  beds_min?: number;
   bathrooms: number;
+  baths_consolidated?: number;
+  baths_max?: number;
+  baths_min?: number;
   squareFeet: number;
+  sqft_max?: number;
+  sqft_min?: number;
   lotSize: number;
   yearBuilt: number;
   propertyType: 'Single Family' | 'Condo' | 'Townhouse' | 'Multi-Family';

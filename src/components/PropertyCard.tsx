@@ -24,6 +24,26 @@ export default function PropertyCard({ property, hidePrice = false }: PropertyCa
     return 'Unknown address';
   })();
 
+const descriptionText = (() => {
+  const d: any = property.description as any;
+  if (typeof d === 'string') return d;
+  if (d && typeof d === 'object') {
+    const parts: string[] = [];
+    if (d.beds) parts.push(`${d.beds} beds`);
+    if (d.beds_max) parts.push(`up to ${d.beds_max} beds`);
+    if (d.beds_min) parts.push(`at least ${d.beds_min} beds`);
+    if (d.baths_consolidated || d.baths) parts.push(`${d.baths_consolidated || d.baths} baths`);
+    if (d.baths_max) parts.push(`up to ${d.baths_max} baths`);
+    if (d.baths_min) parts.push(`at least ${d.baths_min} baths`);
+    if (d.sqft) parts.push(`${d.sqft} sqft`);
+    if (d.sqft_max) parts.push(`up to ${d.sqft_max} sqft`);
+    if (d.sqft_min) parts.push(`at least ${d.sqft_min} sqft`);
+    if (d.lot_sqft) parts.push(`${d.lot_sqft} lot sqft`);
+    return parts.length ? parts.join(' • ') : 'No description available';
+  }
+  return 'No description available';
+})();
+
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % property.images.length);
   };
@@ -132,7 +152,7 @@ export default function PropertyCard({ property, hidePrice = false }: PropertyCa
         </div>
 
         {/* Description */}
-        <p className="text-gray-600 mb-4">{property.description}</p>
+        <p className="text-gray-600 mb-4">{descriptionText}</p>
 
         {/* Features */}
         <div className="flex flex-wrap gap-2">

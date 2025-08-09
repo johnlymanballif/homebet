@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Home, Users, Trophy, Sparkles, ArrowRight } from 'lucide-react';
-import { createSession } from '@/lib/sessionManager';
+import { createSession, createSoloSession } from '@/lib/sessionManager';
 import { useRouter } from 'next/navigation';
 import ShareModal from '@/components/ShareModal';
 
@@ -11,6 +11,7 @@ export default function HomePage() {
   const router = useRouter();
   const [handle, setHandle] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [isCreatingSolo, setIsCreatingSolo] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [sessionId, setSessionId] = useState('');
 
@@ -29,6 +30,21 @@ export default function HomePage() {
 
   const handleStartGame = () => {
     router.push(`/game/${sessionId}`);
+  };
+
+  const handleCreateSolo = async () => {
+    if (!handle.trim() || handle.length < 2) {
+      alert('Please enter a handle (at least 2 characters)');
+      return;
+    }
+    setIsCreatingSolo(true);
+    try {
+      const session = await createSoloSession(handle);
+      setSessionId(session.id);
+      router.push(`/game/${session.id}`);
+    } finally {
+      setIsCreatingSolo(false);
+    }
   };
 
   return (
@@ -105,6 +121,16 @@ export default function HomePage() {
           >
             <span>{isCreating ? 'Creating Game...' : 'Create New Game'}</span>
             <ArrowRight className="w-5 h-5" />
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleCreateSolo}
+            disabled={isCreatingSolo}
+            className="w-full py-4 bg-gray-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2"
+          >
+            <span>{isCreatingSolo ? 'Starting Solo...' : 'Play Solo'}</span>
           </motion.button>
         </div>
 

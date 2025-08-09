@@ -6,6 +6,10 @@ function getApiBase() {
   return '/api/session';
 }
 
+function getSoloBase() {
+  return '/api/solo';
+}
+
 export function getLocalPlayerId(sessionId: string): string | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -38,6 +42,25 @@ export async function createSession(handle: string): Promise<GameSession> {
   if (!session) throw new Error('Session not found after creation');
   try {
     // cache in sessionStorage to enable rehydration on cold start
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('homebet_last_session', JSON.stringify(session));
+    }
+  } catch {}
+  return session;
+}
+
+export async function createSoloSession(handle: string): Promise<GameSession> {
+  const res = await fetch(getSoloBase(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ handle }),
+  });
+  if (!res.ok) throw new Error('Failed to create solo session');
+  const { sessionId } = await res.json();
+  markLocalPlayer(sessionId, 'player1');
+  const session = await getSession(sessionId);
+  if (!session) throw new Error('Solo session not found after creation');
+  try {
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('homebet_last_session', JSON.stringify(session));
     }

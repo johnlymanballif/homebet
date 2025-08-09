@@ -192,7 +192,17 @@ export async function fetchRealEstateData(params?: { city?: string; state?: stri
     const data = await res.json();
     const properties = (data?.properties || []) as Property[];
     if (!properties.length) throw new Error('Empty');
-    return properties.map((p) => ({ ...p, source: 'api' }));
+    return properties.map((p) => ({
+  ...p,
+  source: 'api',
+  beds_max: p.beds_max || undefined,
+  beds_min: p.beds_min || undefined,
+  baths_consolidated: p.baths_consolidated || undefined,
+  baths_max: p.baths_max || undefined,
+  baths_min: p.baths_min || undefined,
+  sqft_max: p.sqft_max || undefined,
+  sqft_min: p.sqft_min || undefined,
+}));
   } catch {
     // Fallback to mocks
     return getMockProperties(limit);
