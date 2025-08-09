@@ -166,7 +166,7 @@ const mockProperties: Property[] = [
 export function getMockProperties(count: number = 5): Property[] {
   // Shuffle and return requested number of properties
   const shuffled = [...mockProperties].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
+  return shuffled.slice(0, count).map((p) => ({ ...p, source: 'mock' }));
 }
 
 // This function would be replaced with actual API call
@@ -181,7 +181,7 @@ export async function fetchRealEstateData(params?: { city?: string; state?: stri
     const data = await res.json();
     const properties = (data?.properties || []) as Property[];
     if (!properties.length) throw new Error('Empty');
-    return properties;
+    return properties.map((p) => ({ ...p, source: 'api' }));
   } catch {
     // Fallback to mocks
     return getMockProperties(limit);

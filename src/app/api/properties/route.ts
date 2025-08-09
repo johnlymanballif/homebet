@@ -48,6 +48,7 @@ function normalizeToProperty(raw: any): Property | null {
       images: photos,
       description,
       features,
+      source: 'api',
     };
   } catch {
     return null;

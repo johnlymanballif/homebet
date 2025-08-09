@@ -14,6 +14,7 @@ export interface Property {
   images: string[];
   description: string;
   features: string[];
+  source?: 'mock' | 'api';
 }
 
 export interface Player {

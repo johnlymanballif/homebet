@@ -79,7 +79,9 @@ export default function PropertyCard({ property, hidePrice = false }: PropertyCa
       <div className="p-6">
         {/* Address */}
         <h3 className="text-xl font-bold text-gray-900 mb-1">
-          {property.address}
+          {property.address} {property.source === 'mock' && (
+            <span className="ml-2 text-xs font-semibold px-2 py-1 rounded-full bg-gray-200 text-gray-700 align-middle">(DEMO)</span>
+          )}
         </h3>
         <p className="text-gray-600 mb-4">
           {property.city}, {property.state} {property.zipCode}
