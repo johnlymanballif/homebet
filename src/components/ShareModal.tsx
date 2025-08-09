@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { Share2, Copy, Check, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
-import { getShareUrl } from '@/lib/utils';
+import { getShareUrl, copyToClipboard } from '@/lib/utils';
 
 interface ShareModalProps {
   sessionId: string;
@@ -16,25 +16,26 @@ export default function ShareModal({ sessionId, onClose, onStart }: ShareModalPr
   const shareUrl = getShareUrl(sessionId);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(shareUrl);
-    setCopied(true);
+    const ok = await copyToClipboard(shareUrl);
+    setCopied(ok);
+    if (!ok) alert('Copy failed. Please copy manually.');
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
+    try {
+      if (navigator.share) {
         await navigator.share({
           title: 'HomeBet - Real Estate Game',
           text: 'Challenge me to guess real estate prices!',
           url: shareUrl,
         });
-      } catch (err) {
-        // User cancelled or error
+        return;
       }
-    } else {
-      handleCopy();
+    } catch {
+      // ignore and fallback
     }
+    handleCopy();
   };
 
   return (

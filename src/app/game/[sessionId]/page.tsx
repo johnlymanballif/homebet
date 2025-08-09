@@ -7,7 +7,7 @@ import GameBoard from '@/components/GameBoard';
 import { GameSession } from '@/types/game';
 import { motion } from 'framer-motion';
 import { Home, Clock } from 'lucide-react';
-import { calculateTimeRemaining } from '@/lib/utils';
+import { calculateTimeRemaining, copyToClipboard } from '@/lib/utils';
 
 export default function GamePage() {
   const params = useParams();
@@ -167,8 +167,11 @@ export default function GamePage() {
 
           <button
             onClick={() => {
-              navigator.clipboard.writeText(`${window.location.origin}/game/${sessionId}`);
-              alert('Link copied!');
+              const url = `${window.location.origin}/game/${sessionId}`;
+              copyToClipboard(url).then((ok) => {
+                if (ok) alert('Link copied!');
+                else alert('Copy failed. Please copy manually.');
+              });
             }}
             className="mt-4 px-6 py-3 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors"
           >
