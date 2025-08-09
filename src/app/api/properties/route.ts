@@ -72,6 +72,7 @@ export async function GET(request: Request) {
   const limit = Number(searchParams.get('limit') || '5');
   const city = searchParams.get('city') || 'Provo';
   const state_code = searchParams.get('state') || 'UT';
+  const location = searchParams.get('location') || `${city}, ${state_code}`;
 
   const rapidApiKey = process.env.RAPIDAPI_KEY;
   const rapidHost = process.env.RAPIDAPI_HOST || 'realtor.p.rapidapi.com';
@@ -84,10 +85,13 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Realtor (RapidAPI) v2 list-for-sale-style endpoint
-    const url = `https://${rapidHost}/properties/v2/list-for-sale?city=${encodeURIComponent(
-      city
-    )}&state_code=${encodeURIComponent(state_code)}&limit=${limit}&offset=0&sort=relevance`;
+    // Support multiple Realtor products on RapidAPI
+    const useRealtor16 = /realtor16\.p\.rapidapi\.com$/i.test(rapidHost || '');
+    const url = useRealtor16
+      ? `https://${rapidHost}/search/forsale?location=${encodeURIComponent(location)}&search_radius=0&limit=${limit}`
+      : `https://${rapidHost}/properties/v2/list-for-sale?city=${encodeURIComponent(
+          city
+        )}&state_code=${encodeURIComponent(state_code)}&limit=${limit}&offset=0&sort=relevance`;
 
     const res = await fetch(url, {
       headers: {

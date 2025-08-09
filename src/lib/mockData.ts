@@ -170,11 +170,12 @@ export function getMockProperties(count: number = 5): Property[] {
 }
 
 // This function would be replaced with actual API call
-export async function fetchRealEstateData(params?: { city?: string; state?: string; limit?: number; baseUrl?: string }): Promise<Property[]> {
-  const { city = 'Provo', state = 'UT', limit = 5, baseUrl } = params || {};
+export async function fetchRealEstateData(params?: { city?: string; state?: string; limit?: number; baseUrl?: string; location?: string }): Promise<Property[]> {
+  const { city = 'Provo', state = 'UT', limit = 5, baseUrl, location } = params || {};
 
   try {
-    const url = `${baseUrl ? baseUrl.replace(/\/$/, '') : ''}/api/properties?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&limit=${limit}`;
+    const base = `${baseUrl ? baseUrl.replace(/\/$/, '') : ''}/api/properties`;
+    const url = `${base}?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&limit=${limit}&location=${encodeURIComponent(location || `${city}, ${state}`)}`;
     const res = await fetch(url, {
       cache: 'no-store',
     });
