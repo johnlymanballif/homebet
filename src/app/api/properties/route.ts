@@ -70,9 +70,14 @@ function normalizeToProperty(raw: any): Property | null {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = Number(searchParams.get('limit') || '5');
-  const city = searchParams.get('city') || 'Provo';
-  const state_code = searchParams.get('state') || 'UT';
-  const location = searchParams.get('location') || `${city}, ${state_code}`;
+  const defaultCity = process.env.DEFAULT_CITY || 'Provo';
+  const defaultState = process.env.DEFAULT_STATE || 'UT';
+  const defaultLocation = process.env.DEFAULT_LOCATION || `${defaultCity}, ${defaultState}`;
+  const location = searchParams.get('location') || `${searchParams.get('city') || defaultCity}, ${searchParams.get('state') || defaultState}`;
+  // Derive city/state from location for APIs that require them
+  const [derivedCityRaw = defaultCity, derivedStateRaw = defaultState] = location.split(',').map((s) => s?.trim());
+  const city = searchParams.get('city') || derivedCityRaw;
+  const state_code = searchParams.get('state') || derivedStateRaw;
 
   const rapidApiKey = process.env.RAPIDAPI_KEY;
   const rapidHost = process.env.RAPIDAPI_HOST || 'realtor.p.rapidapi.com';
@@ -111,7 +116,15 @@ export async function GET(request: Request) {
     }
 
     const data = await res.json();
-    const results: any[] = data?.properties || data?.data || data?.results || [];
+    const results: any[] = Array.isArray(data?.properties)
+      ? data.properties
+      : Array.isArray(data?.data)
+      ? data.data
+      : Array.isArray(data?.results)
+      ? data.results
+      : Array.isArray(data?.listings)
+      ? data.listings
+      : [];
     const normalized = results
       .map(normalizeToProperty)
       .filter(Boolean) as Property[];
