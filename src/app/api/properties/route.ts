@@ -11,8 +11,8 @@ function normalizeToProperty(raw: any): Property | null {
     const state = addressObj.state_code || addressObj.state || 'US';
     const postal_code = addressObj.postal_code || addressObj.zip || '';
     const price = Number(raw.list_price ?? raw.price ?? 0);
-    const beds = Number(raw.beds ?? raw.bedrooms ?? 0);
-    const baths = Number(raw.baths_full ?? raw.bathrooms ?? raw.baths ?? 0);
+    const beds = Number(raw.beds ?? raw.bedrooms ?? raw.beds_max ?? 0);
+    const baths = Number(raw.baths_full ?? raw.bathrooms ?? raw.baths ?? raw.full_baths ?? 0);
     const sqft = Number(
       raw.building_size?.size ?? raw.lot_size?.size ?? raw.sqft ?? raw.square_feet ?? 0
     );
@@ -21,16 +21,28 @@ function normalizeToProperty(raw: any): Property | null {
     const propType: Property['propertyType'] = (
       raw.prop_type || raw.property_type || 'Single Family'
     );
-    const photos: string[] =
-      (raw.photos || raw.photo || [])
-        .map((p: any) => p?.href || p?.url)
-        .filter(Boolean)
-        .slice(0, 5);
+    const photoCandidates: string[] = [];
+    const photosArr = raw.photos || raw.photo || [];
+    if (Array.isArray(photosArr)) {
+      for (const p of photosArr) {
+        const href = p?.href || p?.url;
+        if (href) photoCandidates.push(href);
+      }
+    } else if (typeof photosArr === 'string') {
+      photoCandidates.push(photosArr);
+    }
+    if (raw.primary_photo?.href) photoCandidates.unshift(raw.primary_photo.href);
+    if (raw.thumbnail) photoCandidates.push(raw.thumbnail);
+    if (raw.primary_image_url) photoCandidates.push(raw.primary_image_url);
+    const photos: string[] = photoCandidates.filter(Boolean).slice(0, 5);
 
     const description = raw.description || raw.publicRemarks || 'No description available';
     const features: string[] = [];
 
-    if (!id || !price || photos.length === 0) return null;
+    if (!id || !price) return null;
+    const finalPhotos = photos.length
+      ? photos
+      : ['https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800'];
 
     return {
       id,
@@ -45,7 +57,7 @@ function normalizeToProperty(raw: any): Property | null {
       lotSize: lotSqft,
       yearBuilt,
       propertyType: propType as Property['propertyType'],
-      images: photos,
+      images: finalPhotos,
       description,
       features,
       source: 'api',
