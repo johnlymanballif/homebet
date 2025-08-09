@@ -15,6 +15,15 @@ interface PropertyCardProps {
 export default function PropertyCard({ property, hidePrice = false }: PropertyCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  const addressLine = (() => {
+    const addr: any = property.address as any;
+    if (typeof addr === 'string') return addr;
+    if (addr && typeof addr === 'object') {
+      return addr.line || addr.address || addr.street || `${addr.city || ''}`.trim();
+    }
+    return 'Unknown address';
+  })();
+
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % property.images.length);
   };
@@ -34,8 +43,8 @@ export default function PropertyCard({ property, hidePrice = false }: PropertyCa
       {/* Image Carousel */}
       <div className="relative h-64 md:h-80 bg-gray-200">
         <img
-          src={property.images[currentImageIndex]}
-          alt={property.address}
+          src={(property.images && property.images[currentImageIndex]) || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800'}
+          alt={addressLine}
           className="w-full h-full object-cover"
         />
         
@@ -79,12 +88,12 @@ export default function PropertyCard({ property, hidePrice = false }: PropertyCa
       <div className="p-6">
         {/* Address */}
         <h3 className="text-xl font-bold text-gray-900 mb-1">
-          {property.address} {property.source === 'mock' && (
+          {addressLine} {property.source === 'mock' && (
             <span className="ml-2 text-xs font-semibold px-2 py-1 rounded-full bg-gray-200 text-gray-700 align-middle">(DEMO)</span>
           )}
         </h3>
         <p className="text-gray-600 mb-4">
-          {property.city}, {property.state} {property.zipCode}
+          {String(property.city)}{property.state ? `, ${String(property.state)}` : ''} {String(property.zipCode || '')}
         </p>
 
         {/* Price (if not hidden) */}

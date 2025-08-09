@@ -40,7 +40,7 @@ export default function GameBoard({ session: initialSession }: GameBoardProps) {
   }, [session.id]);
 
   const handleSubmitGuess = (amount: number) => {
-    if (!currentProperty) return;
+    if (!currentProperty || !currentPlayer) return;
     
     const calculation = calculateScore(currentProperty.price, amount);
     
@@ -121,7 +121,7 @@ export default function GameBoard({ session: initialSession }: GameBoardProps) {
         <div className="lg:sticky lg:top-4 lg:h-fit">
           <PriceInput
             onSubmit={handleSubmitGuess}
-            disabled={!!currentPlayer.guesses.find(g => g.propertyId === currentProperty.id)}
+            disabled={!currentPlayer || !!currentPlayer?.guesses.find(g => g.propertyId === currentProperty.id)}
             currentValue={currentPlayerGuess}
           />
           

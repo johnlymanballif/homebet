@@ -36,6 +36,12 @@ export async function createSession(handle: string): Promise<GameSession> {
   markLocalPlayer(sessionId, 'player1');
   const session = await getSession(sessionId);
   if (!session) throw new Error('Session not found after creation');
+  try {
+    // cache in sessionStorage to enable rehydration on cold start
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('homebet_last_session', JSON.stringify(session));
+    }
+  } catch {}
   return session;
 }
 
@@ -57,7 +63,25 @@ export async function getSession(sessionId: string): Promise<GameSession | null>
   });
   if (!res.ok) return null;
   const data = await res.json();
-  return (data?.session as GameSession) || null;
+  const session = (data?.session as GameSession) || null;
+  if (!session && typeof window !== 'undefined') {
+    // Try to rehydrate server store using a cached copy (if present)
+    try {
+      const cached = sessionStorage.getItem('homebet_last_session');
+      if (cached) {
+        const parsed = JSON.parse(cached) as GameSession;
+        if (parsed?.id === sessionId) {
+          await fetch(getApiBase() + '/rehydrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session: parsed }),
+          });
+          return parsed;
+        }
+      }
+    } catch {}
+  }
+  return session;
 }
 
 export async function updatePlayerGuess(
