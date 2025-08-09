@@ -40,7 +40,22 @@ The app is ready to integrate with real estate APIs from RapidAPI:
 - Realtor Search API
 - Zillow.com API
 
-Currently using mock data for development. Update `src/lib/mockData.ts` with real API calls.
+Currently using mock data by default, but a proxy to Realtor.com via RapidAPI is included.
+
+### Realtor.com via RapidAPI
+
+1) Create a RapidAPI account and subscribe to a Realtor.com API (commonly `realtor.p.rapidapi.com`).
+
+2) Add your key to `.env.local`:
+```bash
+RAPIDAPI_KEY=your_rapidapi_key_here
+# Optional if your plan uses a different host name
+RAPIDAPI_HOST=realtor.p.rapidapi.com
+```
+
+3) The serverless route `src/app/api/properties/route.ts` proxies to RapidAPI and normalizes the result into the app's `Property` type.
+
+4) The session uses mock data instantly, then swaps in real listings in the background when available.
 
 ## Game Rules
 

@@ -170,19 +170,20 @@ export function getMockProperties(count: number = 5): Property[] {
 }
 
 // This function would be replaced with actual API call
-export async function fetchRealEstateData(location: string = 'Utah County'): Promise<Property[]> {
-  // In production, this would call RapidAPI
-  // Example:
-  // const response = await fetch('https://us-real-estate-listings.p.rapidapi.com/search', {
-  //   method: 'POST',
-  //   headers: {
-  //     'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
-  //     'X-RapidAPI-Host': 'us-real-estate-listings.p.rapidapi.com',
-  //   },
-  //   body: JSON.stringify({ location, limit: 10 })
-  // });
-  // return response.json();
-  
-  // For now, return mock data
-  return getMockProperties();
+export async function fetchRealEstateData(params?: { city?: string; state?: string; limit?: number }): Promise<Property[]> {
+  const { city = 'Provo', state = 'UT', limit = 5 } = params || {};
+
+  try {
+    const res = await fetch(`/api/properties?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&limit=${limit}`, {
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Failed');
+    const data = await res.json();
+    const properties = (data?.properties || []) as Property[];
+    if (!properties.length) throw new Error('Empty');
+    return properties;
+  } catch {
+    // Fallback to mocks
+    return getMockProperties(limit);
+  }
 }

@@ -1,11 +1,11 @@
 import { GameSession, Player, Property } from '@/types/game';
 import { generateSessionId } from './utils';
-import { getMockProperties } from './mockData';
+import { getMockProperties, fetchRealEstateData } from './mockData';
 
 const STORAGE_KEY = 'homebet_sessions';
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
-export function createSession(playerHandle: string): GameSession {
+export function createSessionSync(playerHandle: string): GameSession {
   const sessionId = generateSessionId();
   const now = Date.now();
   
@@ -29,6 +29,23 @@ export function createSession(playerHandle: string): GameSession {
   };
   
   saveSession(session);
+  return session;
+}
+
+export async function createSession(playerHandle: string): Promise<GameSession> {
+  // First create a session with mock properties for immediate UI responsiveness
+  const session = createSessionSync(playerHandle);
+  // Then try to swap in real data in the background
+  try {
+    const realProps = await fetchRealEstateData({ city: 'Provo', state: 'UT', limit: 5 });
+    if (realProps && realProps.length) {
+      const updated: GameSession = { ...session, properties: realProps };
+      saveSession(updated);
+      return updated;
+    }
+  } catch {
+    // ignore, stay with mocks
+  }
   return session;
 }
 

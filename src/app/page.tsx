@@ -21,7 +21,7 @@ export default function HomePage() {
     }
 
     setIsCreating(true);
-    const session = createSession(handle);
+    const session = await createSession(handle);
     setSessionId(session.id);
     setShowShareModal(true);
     setIsCreating(false);
